@@ -16,11 +16,27 @@ public class GenomeAssembler {
     private int[] suffixArray;
     private List<String> assembledContigs = new ArrayList<>();
 
+
+        // Getters for the data
+    public Map<String, Integer> getReadsMap() {
+        return readsMap;
+    }
+
+    public String getReferenceGenome() {
+        return referenceGenome;
+    }
+
+        public int[] getSuffixArray() {
+        return suffixArray;
+    }
+
+    // method called to read both files, this method will call two other methods to read each file
     public void readInputFiles(String readsFilePath, String referenceFilePath) throws IOException {
         readReadsFile(readsFilePath);
         readReferenceFile(referenceFilePath);
     }
 
+    // method to read the reads file
     private void readReadsFile(String filePath) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -29,7 +45,7 @@ public class GenomeAssembler {
             }
         }
     }
-
+    // method to read the reference file
     private void readReferenceFile(String filePath) throws IOException {
         StringBuilder referenceBuilder = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
@@ -41,14 +57,7 @@ public class GenomeAssembler {
         referenceGenome = referenceBuilder.toString();
     }
 
-    // Getters for the data
-    public Map<String, Integer> getReadsMap() {
-        return readsMap;
-    }
-
-    public String getReferenceGenome() {
-        return referenceGenome;
-    }
+    // create a suffix array using the refrence genome
     private void createSuffixArray() {
         int n = referenceGenome.length();
         Integer[] suffixArray = new Integer[n];
@@ -76,9 +85,7 @@ public class GenomeAssembler {
     }
     
 
-    public int[] getSuffixArray() {
-        return suffixArray;
-    }
+    //go over all the reads that we previously read from file and align them to the reference genome
     public void alignReadsUsingSuffixArray() {
         int totalReads = readsMap.size();
         int readsProcessed = 0;
@@ -94,194 +101,7 @@ public class GenomeAssembler {
             }
         }
     }
-    private String simpleAlignment(String read, String referenceSegment) {
-        StringBuilder alignment = new StringBuilder();
-        int readLen = read.length();
-        int refLen = referenceSegment.length();
-        int minLength = Math.min(readLen, refLen);
-    
-        // Compare each character in the read with the reference segment
-        for (int i = 0; i < minLength; i++) {
-            if (read.charAt(i) == referenceSegment.charAt(i)) {
-                alignment.append("|"); // Match
-            } else {
-                alignment.append("*"); // Mismatch
-            }
-        }
-    
-        // If the read is longer than the reference segment, fill the rest with gaps
-        for (int i = minLength; i < readLen; i++) {
-            alignment.append("-");
-        }
-    
-        return alignment.toString();
-    }
-    public void assembleContigs() {
-        Map<Integer, String> positionToContigMap = new HashMap<>();
-        for (String read : readsMap.keySet()) {
-            List<Integer> positions = findPotentialAlignments(read);
-            for (int position : positions) {
-                positionToContigMap.put(position, read);
-            }
-        }
-    
-        Integer[] positions = positionToContigMap.keySet().toArray(new Integer[0]);
-        Arrays.sort(positions);
-        int totalPositions = positions.length;
-        int positionsProcessed = 0;
-
-        StringBuilder assembledGenome = new StringBuilder();
-        int lastPosition = -1;
-        for (int position : positions) {
-            String contig = positionToContigMap.get(position);
-            if (position > lastPosition) {
-                assembledGenome.append(contig);
-                lastPosition = position + contig.length() - 1;
-            }
-            positionsProcessed++;
-            int progressPercentage = (int) ((positionsProcessed / (double) totalPositions) * 100);
-            System.out.println("Contig Assembly Progress: " + progressPercentage + "% completed.");
-        }
-
-        assembledContigs.add(assembledGenome.toString());
-    }
-
-    private int matchScore = 3;
-    private int mismatchPenalty = -3;
-    private int gapPenalty = -2;
-
-    public void alignReads() {
-        for (String read : readsMap.keySet()) {
-            String alignment = smithWatermanAlignment(read, referenceGenome);
-            // Process the alignment, e.g., store it or print it out
-            System.out.println("Alignment for read: " + read + "\n" + alignment);
-        }
-    }
-
-    private String smithWatermanAlignment(String s1, String s2) {
-        int[][] scoreMatrix = new int[s1.length() + 1][s2.length() + 1];
-        int maxScore = 0;
-        int maxI = 0;
-        int maxJ = 0;
-
-        // Build score matrix
-        for (int i = 1; i <= s1.length(); i++) {
-            for (int j = 1; j <= s2.length(); j++) {
-                int match = (s1.charAt(i - 1) == s2.charAt(j - 1)) ? matchScore : mismatchPenalty;
-                int scoreDiag = scoreMatrix[i - 1][j - 1] + match;
-                int scoreLeft = scoreMatrix[i][j - 1] + gapPenalty;
-                int scoreUp = scoreMatrix[i - 1][j] + gapPenalty;
-                scoreMatrix[i][j] = Math.max(0, Math.max(Math.max(scoreDiag, scoreLeft), scoreUp));
-
-                if (scoreMatrix[i][j] > maxScore) {
-                    maxScore = scoreMatrix[i][j];
-                    maxI = i;
-                    maxJ = j;
-                }
-            }
-        }
-
-        // Traceback
-        StringBuilder aligned1 = new StringBuilder();
-        StringBuilder aligned2 = new StringBuilder();
-        int i = maxI;
-        int j = maxJ;
-        while (i > 0 && j > 0 && scoreMatrix[i][j] != 0) {
-            if (scoreMatrix[i][j] == scoreMatrix[i - 1][j - 1] + ((s1.charAt(i - 1) == s2.charAt(j - 1)) ? matchScore : mismatchPenalty)) {
-                aligned1.insert(0, s1.charAt(i - 1));
-                aligned2.insert(0, s2.charAt(j - 1));
-                i--;
-                j--;
-            } else if (scoreMatrix[i][j] == scoreMatrix[i][j - 1] + gapPenalty) {
-                aligned1.insert(0, '-');
-                aligned2.insert(0, s2.charAt(j - 1));
-                j--;
-            } else {
-                aligned1.insert(0, s1.charAt(i - 1));
-                aligned2.insert(0, '-');
-                i--;
-            }
-        }
-
-        return "Alignment:\n" + aligned1.toString() + "\n" + aligned2.toString();
-    }
-    public void assembleContigs1() {
-        // Assume each read is initially a contig
-        assembledContigs.addAll(readsMap.keySet());
-    
-        int totalMerges = 0;
-        boolean merged = true;
-        while (merged) {
-            merged = false;
-            int initialContigCount = assembledContigs.size();
-    System.out.println("Initial contig count: " + initialContigCount);
-            for (int i = 0; i < assembledContigs.size(); i++) {
-                for (int j = i + 1; j < assembledContigs.size(); j++) {
-                    String mergedContig = tryMerge(assembledContigs.get(i), assembledContigs.get(j));
-                    if (!mergedContig.isEmpty()) {
-                        assembledContigs.set(i, mergedContig);
-                        assembledContigs.remove(j);
-                        merged = true;
-                        totalMerges++;
-                        break;
-                    }
-                }
-                if (merged) {
-                    break;
-                }
-            }
-    
-            int currentContigCount = assembledContigs.size();
-            int mergesInThisIteration = initialContigCount - currentContigCount;
-            if (mergesInThisIteration > 0) {
-    System.out.println("Iteration completed: Merged " + mergesInThisIteration + " contigs. Total merges so far: " + totalMerges);
-}
-
-
-        }
-    
-        System.out.println("Contig assembly completed. Total merges: " + totalMerges);
-    }
-    
-
-    private String tryMerge(String contig1, String contig2) {
-        int minOverlap = 30; // Minimum overlap length to consider a merge
-
-        // Try to merge contig2 to the end of contig1
-        for (int i = 1; i <= Math.min(contig1.length(), contig2.length()); i++) {
-            if (contig1.endsWith(contig2.substring(0, i)) && i >= minOverlap) {
-                return contig1 + contig2.substring(i);
-            }
-        }
-
-        // Try to merge contig1 to the end of contig2
-        for (int i = 1; i <= Math.min(contig1.length(), contig2.length()); i++) {
-            if (contig2.endsWith(contig1.substring(0, i)) && i >= minOverlap) {
-                return contig2 + contig1.substring(i);
-            }
-        }
-
-        return ""; // No merge possible
-    }
-
-    public void writeAssembledContigsToFile(String filePath) throws IOException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-            for (String contig : assembledContigs) {
-                writer.write(contig);
-                writer.newLine();
-            }
-        }
-    }
-    public void alignReadsUsingSmithWaterman() {
-        for (String read : readsMap.keySet()) {
-            List<Integer> potentialAlignments = findPotentialAlignments(read);
-            for (int position : potentialAlignments) {
-                String referenceSegment = referenceGenome.substring(position, Math.min(referenceGenome.length(), position + read.length()));
-                String alignment = smithWatermanAlignment(read, referenceSegment);
-                // Process alignment, e.g., store it, print it, etc.
-            }
-        }
-    }
+    // a binary sort method to find an allignment between the reads and the refrence genome that was put in a suffix array
     private List<Integer> findPotentialAlignments(String read) {
         List<Integer> positions = new ArrayList<>();
         int low = 0;
@@ -314,14 +134,77 @@ public class GenomeAssembler {
         }
         return positions;
     }
+
+    // compare the potential alignemnt to the read and out | for match and * for mismatch and - for gap
+    private String simpleAlignment(String read, String referenceSegment) {
+        StringBuilder alignment = new StringBuilder();
+        int readLen = read.length();
+        int refLen = referenceSegment.length();
+        int minLength = Math.min(readLen, refLen);
+    
+        // Compare each character in the read with the reference segment
+        for (int i = 0; i < minLength; i++) {
+            if (read.charAt(i) == referenceSegment.charAt(i)) {
+                alignment.append("|"); // Match
+            } else {
+                alignment.append("*"); // Mismatch
+            }
+        }
+    
+        // If the read is longer than the reference segment, fill the rest with gaps
+        for (int i = minLength; i < readLen; i++) {
+            alignment.append("-");
+        }
+    
+        return alignment.toString();
+    }
+    // after getting the reads that we want to from the previous method we will assemble them into one read genome while allowing some mismatches
+    public void assembleContigs() {
+        Map<Integer, String> positionToContigMap = new HashMap<>();
+        for (String read : readsMap.keySet()) {
+            List<Integer> positions = findPotentialAlignments(read);
+            for (int position : positions) {
+                positionToContigMap.put(position, read);
+            }
+        }
+    
+        Integer[] positions = positionToContigMap.keySet().toArray(new Integer[0]);
+        Arrays.sort(positions);
+        int totalPositions = positions.length;
+        int positionsProcessed = 0;
+
+        StringBuilder assembledGenome = new StringBuilder();
+        int lastPosition = -1;
+        for (int position : positions) {
+            String contig = positionToContigMap.get(position);
+            if (position > lastPosition) {
+                assembledGenome.append(contig);
+                lastPosition = position + contig.length() - 1;
+            }
+            positionsProcessed++;
+            int progressPercentage = (int) ((positionsProcessed / (double) totalPositions) * 100);
+            System.out.println("Contig Assembly Progress: " + progressPercentage + "% completed.");
+        }
+
+        assembledContigs.add(assembledGenome.toString());
+    }
+
+    // write the assembled contigs to a file    
+    public void writeAssembledContigsToFile(String filePath) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (String contig : assembledContigs) {
+                writer.write(contig);
+                writer.newLine();
+            }
+        }
+    }
+    
     public static void main(String[] args) {
         
         GenomeAssembler assembler = new GenomeAssembler();
         try {
             assembler.readInputFiles("reads.txt", "reference.txt");
             assembler.createSuffixArray(); // Creating the suffix array
-            assembler.alignReadsUsingSmithWaterman();
-            System.out.println("Reads aligned using Smith-Waterman.");
             assembler.assembleContigs();
             System.out.println("Contigs assembled.");
             assembler.writeAssembledContigsToFile("assembled_reads.txt");
