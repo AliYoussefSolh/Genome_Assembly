@@ -26,7 +26,7 @@ def construct_graph(reads, k):
     """ Construct de bruijn graph from sets of short reads with k length word"""
     edges = dict()
     vertices = dict()
-    print(reads)
+    # print(reads)
     for read in reads:
         i = 0
         while i+k < len(read):
