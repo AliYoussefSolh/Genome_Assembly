@@ -87,22 +87,6 @@ public class GenomeAssembler {
 
     // go over all the reads that we previously read from file and align them to the
     // reference genome
-    public void alignReadsUsingSuffixArray() {
-        int totalReads = readsMap.size();
-        int readsProcessed = 0;
-        for (String read : readsMap.keySet()) {
-            List<Integer> potentialAlignments = findPotentialAlignments(read);
-            for (int position : potentialAlignments) {
-                String referenceSegment = referenceGenome.substring(position,
-                        Math.min(referenceGenome.length(), position + read.length()));
-                String alignment = simpleAlignment(read, referenceSegment);
-                // Process alignment, e.g., store it, print it, etc.
-                readsProcessed++;
-                int progressPercentage = (int) ((readsProcessed / (double) totalReads) * 100);
-                System.out.println("Alignment Progress: " + progressPercentage + "% completed.");
-            }
-        }
-    }
 
     // a binary sort method to find an allignment between the reads and the refrence
     // genome that was put in a suffix array
@@ -141,31 +125,6 @@ public class GenomeAssembler {
         return positions;
     }
 
-    // compare the potential alignemnt to the read and out | for match and * for
-    // mismatch and - for gap
-    private String simpleAlignment(String read, String referenceSegment) {
-        StringBuilder alignment = new StringBuilder();
-        int readLen = read.length();
-        int refLen = referenceSegment.length();
-        int minLength = Math.min(readLen, refLen);
-
-        // Compare each character in the read with the reference segment
-        for (int i = 0; i < minLength; i++) {
-            if (read.charAt(i) == referenceSegment.charAt(i)) {
-                alignment.append("|"); // Match
-            } else {
-                alignment.append("*"); // Mismatch
-            }
-        }
-
-        // If the read is longer than the reference segment, fill the rest with gaps
-        for (int i = minLength; i < readLen; i++) {
-            alignment.append("-");
-        }
-
-        return alignment.toString();
-    }
-
     // after getting the reads that we want to from the previous method we will
     // assemble them into one read genome while allowing some mismatches
     public void assembleContigs() {
@@ -186,10 +145,14 @@ public class GenomeAssembler {
         int lastPosition = -1;
         for (int position : positions) {
             String contig = positionToContigMap.get(position);
-            if (position > lastPosition) {
-                assembledGenome.append(contig);
-                lastPosition = position + contig.length() - 1;
-            }
+            int overlap = Math.max(0, lastPosition - position + 1);
+
+            // Append only the non-overlapping part to the assembled genome
+            assembledGenome.append(contig.substring(overlap));
+
+            // Update the last position
+            lastPosition = position + contig.length() - 1;
+
             positionsProcessed++;
             int progressPercentage = (int) ((positionsProcessed / (double) totalPositions) * 100);
             System.out.println("Contig Assembly Progress: " + progressPercentage + "% completed.");
@@ -212,7 +175,7 @@ public class GenomeAssembler {
 
         GenomeAssembler assembler = new GenomeAssembler();
         try {
-            assembler.readInputFiles("reads.txt", "reference.txt");
+            assembler.readInputFiles("test_data/reads.txt", "test_data/genome.txt");
             assembler.createSuffixArray(); // Creating the suffix array
             assembler.assembleContigs();
             System.out.println("Contigs assembled.");
