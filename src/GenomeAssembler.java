@@ -184,7 +184,7 @@ public class GenomeAssembler {
         try {
             // Reading input files
             startTime = System.currentTimeMillis();
-            assembler.readInputFiles("resources/test_cases/reads3.txt", "resources/test_cases/t3.txt");
+            assembler.readInputFiles("../resources/reads.txt", "../resources/reference.txt");
             endTime = System.currentTimeMillis();
             System.out.println("Time taken to read input files: " + (endTime - startTime) + " ms");
             totalTime += (endTime - startTime);
@@ -205,7 +205,7 @@ public class GenomeAssembler {
 
             // Writing assembled contigs to a file
             startTime = System.currentTimeMillis();
-            assembler.writeAssembledContigsToFile("resources/test_cases/assembled_reads3.txt");
+            assembler.writeAssembledContigsToFile("../resources/assembled_reads.txt");
             endTime = System.currentTimeMillis();
             System.out.println("Time taken to write assembled contigs to file: " + (endTime - startTime) + " ms");
             totalTime += (endTime - startTime);
