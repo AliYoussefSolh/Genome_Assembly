@@ -60,6 +60,7 @@ public class GenomeAssembler {
 
     // create a suffix array using the refrence genome
     private void createSuffixArray() {
+        // this.suffixArray = SuffixArrayConstruction.buildSuffix(referenceGenome);
         int n = referenceGenome.length();
         Integer[] suffixArray = new Integer[n];
         for (int i = 0; i < n; i++) {
@@ -69,7 +70,8 @@ public class GenomeAssembler {
         Arrays.sort(suffixArray, (i1, i2) -> {
             while (i1 < n && i2 < n) {
                 if (referenceGenome.charAt(i1) != referenceGenome.charAt(i2)) {
-                    return Character.compare(referenceGenome.charAt(i1), referenceGenome.charAt(i2));
+                    return Character.compare(referenceGenome.charAt(i1),
+                            referenceGenome.charAt(i2));
                 }
                 i1++;
                 i2++;
@@ -82,6 +84,7 @@ public class GenomeAssembler {
         for (int i = 0; i < n; i++) {
             this.suffixArray[i] = suffixArray[i];
         }
+        // System.out.println(Arrays.toString(this.suffixArray));
         System.out.println("Suffix array created.");
     }
 
@@ -138,8 +141,8 @@ public class GenomeAssembler {
 
         Integer[] positions = positionToContigMap.keySet().toArray(new Integer[0]);
         Arrays.sort(positions);
-        int totalPositions = positions.length;
-        int positionsProcessed = 0;
+        // int totalPositions = positions.length;
+        // int positionsProcessed = 0;
 
         StringBuilder assembledGenome = new StringBuilder();
         int lastPosition = -1;
@@ -153,9 +156,11 @@ public class GenomeAssembler {
             // Update the last position
             lastPosition = position + contig.length() - 1;
 
-            positionsProcessed++;
-            int progressPercentage = (int) ((positionsProcessed / (double) totalPositions) * 100);
-            System.out.println("Contig Assembly Progress: " + progressPercentage + "% completed.");
+            // positionsProcessed++;
+            // int progressPercentage = (int) ((positionsProcessed / (double)
+            // totalPositions) * 100);
+            // System.out.println("Contig Assembly Progress: " + progressPercentage + "%
+            // completed.");
         }
 
         assembledContigs.add(assembledGenome.toString());
@@ -174,16 +179,43 @@ public class GenomeAssembler {
     public static void main(String[] args) {
 
         GenomeAssembler assembler = new GenomeAssembler();
+        long startTime, endTime, totalTime = 0;
+
         try {
-            assembler.readInputFiles("test_data/reads.txt", "test_data/genome.txt");
-            assembler.createSuffixArray(); // Creating the suffix array
+            // Reading input files
+            startTime = System.currentTimeMillis();
+            assembler.readInputFiles("test_cases/reads1.txt", "test_cases/t1.txt");
+            endTime = System.currentTimeMillis();
+            System.out.println("Time taken to read input files: " + (endTime - startTime) + " ms");
+            totalTime += (endTime - startTime);
+
+            // Creating the suffix array
+            startTime = System.currentTimeMillis();
+            assembler.createSuffixArray();
+            endTime = System.currentTimeMillis();
+            System.out.println("Time taken to create suffix array: " + (endTime - startTime) + " ms");
+            totalTime += (endTime - startTime);
+
+            // Assembling contigs
+            startTime = System.currentTimeMillis();
             assembler.assembleContigs();
-            System.out.println("Contigs assembled.");
-            assembler.writeAssembledContigsToFile("assembled_reads.txt");
+            endTime = System.currentTimeMillis();
+            System.out.println("Time taken to assemble contigs: " + (endTime - startTime) + " ms");
+            totalTime += (endTime - startTime);
+
+            // Writing assembled contigs to a file
+            startTime = System.currentTimeMillis();
+            assembler.writeAssembledContigsToFile("test_cases/assembled_reads1.txt");
+            endTime = System.currentTimeMillis();
+            System.out.println("Time taken to write assembled contigs to file: " + (endTime - startTime) + " ms");
+            totalTime += (endTime - startTime);
+
             System.out.println("Assembly completed. Contigs written to 'assembled_reads.txt'.");
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        System.out.println("Total time taken: " + totalTime + " ms");
     }
 
 }

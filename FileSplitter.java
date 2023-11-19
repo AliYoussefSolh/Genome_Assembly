@@ -2,7 +2,7 @@ import java.io.*;
 
 public class FileSplitter {
     public static void main(String[] args) {
-        String inputFilePath = "reference.txt"; // Replace with your input file path
+        String inputFilePath = "assembled_reads.txt"; // Replace with your input file path
         String outputDirectory = "output/"; // Replace with your desired output directory
         int LENGTH = 50;
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFilePath))) {
@@ -29,7 +29,7 @@ public class FileSplitter {
                 int startIdx = i * partLength;
                 int endIdx = (i == LENGTH - 1) ? totalLength : ((i + 1) * partLength);
 
-                String outputFileName = outputDirectory + "part" + (i + 1) + ".txt";
+                String outputFileName = outputDirectory + "partt" + (i + 1) + ".txt";
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName))) {
                     writer.write(fullContent.substring(startIdx, endIdx));
                 }
